@@ -134,6 +134,6 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Example for a frontend running on localhost
-    "https://yourdomain.com",
+   "https://alx-project-nexus-sjws.onrender.com",
+   "http://localhost:8080",
 ]
