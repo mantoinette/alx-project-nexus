@@ -133,7 +133,4 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-CORS_ALLOWED_ORIGINS = [
-   "https://alx-project-nexus-sjws.onrender.com",
-   "http://localhost:8080",
-]
+CORS_ALLOW_ALL_ORIGINS = True
