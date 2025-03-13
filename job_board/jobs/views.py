@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from rest_framework import viewsets, status, filters
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly, AllowAny
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.response import Response
 from django.contrib.auth.decorators import login_required
@@ -12,6 +12,8 @@ from django.db.models import Q
 from django.utils import timezone
 from .models import Job, Application, Category
 from .serializers import JobSerializer, ApplicationSerializer, CategorySerializer, UserSerializer
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 # Create your views here.
 
@@ -23,9 +25,29 @@ class JobViewSet(viewsets.ModelViewSet):
     search_fields = ['title', 'company_name', 'description', 'location']
     ordering_fields = ['created_at', 'application_deadline', 'salary_min']
 
+    @swagger_auto_schema(
+        operation_description="List all available jobs or create a new job",
+        responses={
+            200: JobSerializer(many=True),
+            401: "Unauthorized",
+            403: "Forbidden"
+        }
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def perform_create(self, serializer):
         serializer.save(posted_by=self.request.user)
 
+    @swagger_auto_schema(
+        operation_description="Apply for a specific job",
+        request_body=ApplicationSerializer,
+        responses={
+            201: ApplicationSerializer,
+            400: "Bad Request",
+            401: "Unauthorized"
+        }
+    )
     @action(detail=True, methods=['post'])
     def apply(self, request, pk=None):
         job = self.get_object()
@@ -167,7 +189,24 @@ def apply_job(request, job_id):
     }
     return render(request, 'jobs/apply_job.html', context)
 
+@swagger_auto_schema(
+    method='get',
+    operation_description="Search for jobs with multiple filters",
+    manual_parameters=[
+        openapi.Parameter('q', openapi.IN_QUERY, description="Search query", type=openapi.TYPE_STRING),
+        openapi.Parameter('location', openapi.IN_QUERY, description="Job location", type=openapi.TYPE_STRING),
+        openapi.Parameter('category', openapi.IN_QUERY, description="Job category", type=openapi.TYPE_STRING),
+        openapi.Parameter('employment_type', openapi.IN_QUERY, description="Type of employment", type=openapi.TYPE_STRING),
+        openapi.Parameter('min_salary', openapi.IN_QUERY, description="Minimum salary", type=openapi.TYPE_NUMBER),
+        openapi.Parameter('max_salary', openapi.IN_QUERY, description="Maximum salary", type=openapi.TYPE_NUMBER),
+    ],
+    responses={
+        200: JobSerializer(many=True),
+        400: "Bad Request"
+    }
+)
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def search_jobs(request):
     """
     Advanced search endpoint for jobs with multiple filters
