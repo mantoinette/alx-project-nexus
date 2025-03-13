@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnl
 from rest_framework.decorators import api_view, action, permission_classes
 from rest_framework.response import Response
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
@@ -75,22 +75,97 @@ def job_list(request):
 
 @login_required
 def user_dashboard(request):
-    # Fetch all available jobs
-    jobs = Job.objects.filter(is_available=True)  # Only fetch jobs that are available
-    return render(request, 'user_dashboard.html', {'jobs': jobs})
+    # Get all available jobs
+    jobs = Job.objects.filter(is_available=True).order_by('-created_at')
+    
+    # Get user's applications if authenticated
+    applications = []
+    if request.user.is_authenticated:
+        applications = Application.objects.filter(user=request.user).order_by('-applied_at')
+    
+    # Get all categories for the search form
+    categories = Category.objects.all()
+
+    context = {
+        'jobs': jobs,
+        'applications': applications,
+        'categories': categories,
+    }
+    
+    return render(request, 'jobs/dashboard/user_dashboard.html', context)
+
+@login_required
+def admin_dashboard(request):
+    # Check if user is staff, if not redirect to home
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access the admin dashboard')
+        return redirect('home')
+    
+    # Get statistics for admin
+    total_jobs = Job.objects.count()
+    active_jobs = Job.objects.filter(is_available=True).count()
+    total_applications = Application.objects.count()
+    recent_applications = Application.objects.order_by('-applied_at')[:10]
+    categories = Category.objects.all()
+    total_users = User.objects.count()
+    active_jobs_list = Job.objects.filter(is_available=True).order_by('-created_at')[:10]
+    
+    context = {
+        'total_jobs': total_jobs,
+        'active_jobs': active_jobs,
+        'total_applications': total_applications,
+        'recent_applications': recent_applications,
+        'categories': categories,
+        'total_users': total_users,
+        'active_jobs_list': active_jobs_list,
+    }
+    
+    return render(request, 'jobs/dashboard/admin_dashboard.html', context)
 
 @login_required
 def apply_job(request, job_id):
     job = get_object_or_404(Job, id=job_id)
-
+    
+    # Check if user has already applied
+    if Application.objects.filter(user=request.user, job=job).exists():
+        messages.warning(request, 'You have already applied for this job.')
+        return redirect('user_dashboard')
+        
     if request.method == 'POST':
-        # Handle application logic here (e.g., save application details)
-        # For example, you could create an Application model to store user applications
-        # Application.objects.create(user=request.user, job=job)
-
-        return redirect('user_dashboard')  # Redirect to the dashboard after applying
-
-    return render(request, 'apply_job.html', {'job': job})  # Render an application form if needed
+        try:
+            # Create application with required fields
+            application = Application(
+                user=request.user,
+                job=job
+            )
+            
+            # Add optional fields if provided
+            fields = [
+                'first_name', 'last_name', 'email', 'phone', 
+                'experience', 'current_position', 'expected_salary',
+                'cover_letter', 'linkedin_url', 'portfolio_url'
+            ]
+            
+            for field in fields:
+                value = request.POST.get(field)
+                if value:
+                    setattr(application, field, value)
+            
+            # Handle resume upload
+            if 'resume' in request.FILES:
+                application.resume = request.FILES['resume']
+                
+            application.save()
+            messages.success(request, 'Your application has been submitted successfully!')
+            return redirect('user_dashboard')
+            
+        except Exception as e:
+            messages.error(request, f'Error submitting application: {str(e)}')
+            
+    context = {
+        'job': job
+    }
+    return render(request, 'jobs/apply_job.html', context)
 
 @api_view(['GET'])
 def search_jobs(request):
@@ -149,54 +224,76 @@ def search_jobs(request):
         'results': serializer.data
     })
 
-@api_view(['POST'])
-def user_signup(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
-    email = request.data.get('email')
-    first_name = request.data.get('first_name', '')
-    last_name = request.data.get('last_name', '')
+def home(request):
+    """
+    Home page view - main entry point for all users
+    """
+    # Get latest jobs (limit to 6)
+    latest_jobs = Job.objects.filter(is_available=True).order_by('-created_at')[:6]
+    
+    # No automatic redirects - show home page with login/signup options
+    context = {
+        'latest_jobs': latest_jobs,
+    }
+    
+    return render(request, 'jobs/home.html', context)
 
-    if User.objects.filter(username=username).exists():
-        return Response(
-            {'error': 'Username already exists'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    if User.objects.filter(email=email).exists():
-        return Response(
-            {'error': 'Email already exists'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-
-    user = User.objects.create_user(
-        username=username,
-        email=email,
-        password=password,
-        first_name=first_name,
-        last_name=last_name
-    )
-
-    return Response(
-        UserSerializer(user).data,
-        status=status.HTTP_201_CREATED
-    )
-
-@api_view(['POST'])
 def user_login(request):
-    username = request.data.get('username')
-    password = request.data.get('password')
+    # Redirect if already logged in
+    if request.user.is_authenticated:
+        if request.user.is_staff:
+            return redirect('admin_dashboard')
+        return redirect('user_dashboard')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            messages.success(request, f'Welcome back, {user.username}!')
+            if user.is_staff:
+                return redirect('admin_dashboard')
+            return redirect('user_dashboard')
+        else:
+            messages.error(request, 'Invalid username or password')
+    
+    return render(request, 'jobs/auth/login.html')
 
-    user = authenticate(request, username=username, password=password)
-
-    if user is not None:
+def user_signup(request):
+    # Redirect if already logged in
+    if request.user.is_authenticated:
+        if request.user.is_staff:
+            return redirect('admin_dashboard')
+        return redirect('user_dashboard')
+        
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
+        
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match')
+            return render(request, 'jobs/auth/signup.html')
+            
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists')
+            return render(request, 'jobs/auth/signup.html')
+            
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already exists')
+            return render(request, 'jobs/auth/signup.html')
+            
+        user = User.objects.create_user(username=username, email=email, password=password)
         login(request, user)
-        return Response({
-            'user': UserSerializer(user).data,
-            'message': 'Login successful'
-        })
-    else:
-        return Response(
-            {'error': 'Invalid credentials'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
+        messages.success(request, 'Account created successfully! Welcome to Job Board.')
+        return redirect('user_dashboard')
+        
+    return render(request, 'jobs/auth/signup.html')
+
+def user_logout(request):
+    logout(request)
+    messages.success(request, 'You have been successfully logged out.')
+    return redirect('home')

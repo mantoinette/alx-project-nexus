@@ -1,0 +1,101 @@
+<!-- alx-project-nexus/job_board/templates/signup.html -->
+{% extends 'jobs/base.html' %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block extra_css %}
+<style>
+    .auth-container {
+        max-width: 450px;
+        margin: 2rem auto;
+        padding: 2rem;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+
+    .form-control {
+        padding: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+        margin-bottom: 0.5rem;
+    }
+
+    .form-control:focus {
+        border-color: #2ecc71;
+        box-shadow: 0 0 0 0.2rem rgba(46, 204, 113, 0.25);
+    }
+
+    .btn-signup {
+        background-color: #2ecc71;
+        border: none;
+        padding: 0.75rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .btn-signup:hover {
+        background-color: #27ae60;
+        transform: translateY(-2px);
+    }
+
+    .alert {
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="auth-container">
+        <h2 class="text-center mb-4">Create an Account</h2>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-danger alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="POST" action="{% url 'user_signup' %}">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required 
+                       placeholder="Choose a username">
+            </div>
+            
+            <div class="mb-3">
+                <label for="email" class="form-label">Email address</label>
+                <input type="email" class="form-control" id="email" name="email" required 
+                       placeholder="Enter your email">
+            </div>
+            
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required 
+                       placeholder="Create a password">
+            </div>
+            
+            <div class="mb-4">
+                <label for="confirm_password" class="form-label">Confirm Password</label>
+                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required 
+                       placeholder="Confirm your password">
+                <div class="form-text text-muted">Make sure both passwords match.</div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-signup w-100 mb-3">
+                Create Account
+            </button>
+        </form>
+        
+        <div class="text-center mt-3">
+            <p class="mb-0">Already have an account? <a href="{% url 'user_login' %}" class="text-primary">Log in</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

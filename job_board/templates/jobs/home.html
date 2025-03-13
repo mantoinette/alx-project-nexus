@@ -1,0 +1,222 @@
+{% extends 'jobs/base.html' %}
+
+{% block title %}Welcome to Job Board{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    .auth-buttons {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+    }
+
+    .hero-section {
+        background: linear-gradient(135deg, #2a2a72 0%, #009ffd 100%);
+        padding: 100px 0;
+        margin-top: -24px;
+        position: relative;
+    }
+
+    .auth-btn {
+        padding: 0.75rem 1.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+    }
+
+    .signup-btn {
+        background: #2ecc71;
+        color: white;
+        border: none;
+        margin-right: 10px;
+    }
+
+    .signup-btn:hover {
+        background: #27ae60;
+        transform: translateY(-2px);
+        color: white;
+    }
+
+    .login-btn {
+        background: transparent;
+        color: white;
+        border: 2px solid white;
+    }
+
+    .login-btn:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-2px);
+        color: white;
+    }
+
+    .cta-buttons {
+        margin-top: 2rem;
+    }
+
+    .feature-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+        padding: 30px;
+        height: 100%;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-10px);
+    }
+
+    .feature-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #f8f9fa;
+    }
+
+    .job-card {
+        border: none;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+        height: 100%;
+    }
+
+    .job-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .cta-section {
+        background: linear-gradient(135deg, #00b4db 0%, #0083b0 100%);
+        margin-top: 50px;
+        padding: 80px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Auth Buttons -->
+{% if not user.is_authenticated %}
+<div class="auth-buttons">
+    <a href="{% url 'user_signup' %}" class="btn auth-btn signup-btn">
+        <i class="fas fa-user-plus me-2"></i>Sign Up
+    </a>
+    <a href="{% url 'user_login' %}" class="btn auth-btn login-btn">
+        <i class="fas fa-sign-in-alt me-2"></i>Login
+    </a>
+</div>
+{% endif %}
+
+<!-- Hero Section -->
+<div class="hero-section text-white">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">Find Your Dream Job</h1>
+                <p class="lead mb-4">Connect with top employers and discover opportunities that match your skills and aspirations.</p>
+                
+                {% if not user.is_authenticated %}
+                <div class="mt-4">
+                    <p class="h5 mb-3">Get started in 3 easy steps:</p>
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-light text-dark me-2">1</span>
+                        <span>Create your account</span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-light text-dark me-2">2</span>
+                        <span>Complete your profile</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="badge bg-light text-dark me-2">3</span>
+                        <span>Apply to jobs</span>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-lg-6 mt-5 mt-lg-0">
+                <img src="https://via.placeholder.com/600x400" alt="Job Search" class="img-fluid rounded-lg shadow-lg">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="container py-5">
+    <h2 class="text-center mb-5">Why Choose Our Job Board?</h2>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-search fa-2x text-primary"></i>
+                </div>
+                <h3 class="h4 mb-3">Easy Job Search</h3>
+                <p class="text-muted mb-0">Find relevant jobs with our advanced search filters and matching system.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-building fa-2x text-primary"></i>
+                </div>
+                <h3 class="h4 mb-3">Top Companies</h3>
+                <p class="text-muted mb-0">Connect with leading companies and exciting startups.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-paper-plane fa-2x text-primary"></i>
+                </div>
+                <h3 class="h4 mb-3">Quick Apply</h3>
+                <p class="text-muted mb-0">Apply to multiple jobs with your saved profile and resume.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if latest_jobs %}
+<!-- Latest Jobs Section -->
+<div class="container py-5">
+    <h2 class="text-center mb-5">Latest Opportunities</h2>
+    <div class="row g-4">
+        {% for job in latest_jobs %}
+        <div class="col-md-4">
+            <div class="card job-card">
+                <div class="card-body">
+                    <h5 class="card-title">{{ job.title }}</h5>
+                    <h6 class="card-subtitle mb-3 text-muted">{{ job.company_name }}</h6>
+                    <p class="card-text">
+                        <i class="fas fa-map-marker-alt me-2"></i>{{ job.location }}<br>
+                        <i class="fas fa-briefcase me-2"></i>{{ job.employment_type }}
+                    </p>
+                    {% if not user.is_authenticated %}
+                    <a href="{% url 'user_login' %}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-sign-in-alt me-2"></i>Login to Apply
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Call to Action -->
+{% if not user.is_authenticated %}
+<div class="cta-section text-white">
+    <div class="container text-center">
+        <h2 class="display-4 mb-4">Ready to Start Your Career Journey?</h2>
+        <p class="lead mb-4">Join thousands of professionals who've found their dream jobs through our platform.</p>
+        <a href="{% url 'user_signup' %}" class="btn btn-light btn-lg px-5">
+            <i class="fas fa-rocket me-2"></i>Get Started Now
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %} 

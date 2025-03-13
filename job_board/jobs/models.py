@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 import datetime
+from django.core.validators import FileExtensionValidator
 
 # Create your models here.
 
@@ -44,7 +45,37 @@ class Job(models.Model):
 class Application(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     job = models.ForeignKey(Job, on_delete=models.CASCADE)
+    first_name = models.CharField(max_length=100, null=True, blank=True)  # Made optional
+    last_name = models.CharField(max_length=100, null=True, blank=True)   # Made optional
+    email = models.EmailField(null=True, blank=True)                      # Made optional
+    phone = models.CharField(max_length=20, null=True, blank=True)        # Made optional
+    experience = models.CharField(max_length=20, null=True, blank=True)   # Made optional
+    current_position = models.CharField(max_length=100, blank=True, null=True)
+    expected_salary = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    resume = models.FileField(
+        upload_to='resumes/',
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'doc', 'docx'])],
+        null=True,
+        blank=True
+    )
+    cover_letter = models.TextField(blank=True, null=True)
+    linkedin_url = models.URLField(blank=True, null=True)
+    portfolio_url = models.URLField(blank=True, null=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('reviewing', 'Reviewing'),
+            ('accepted', 'Accepted'),
+            ('rejected', 'Rejected')
+        ],
+        default='pending'
+    )
     applied_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.user.username} applied for {self.job.title}"
+        return f"{self.user.username}'s application for {self.job.title}"
+
+    class Meta:
+        ordering = ['-applied_at']
